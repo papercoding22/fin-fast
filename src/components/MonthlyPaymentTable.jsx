@@ -1,6 +1,6 @@
 import { getPaymentAt, formatVND } from '../utils/loanCalculations';
 
-export default function MonthlyPaymentTable({ banks, schedules, loanTermMonths }) {
+export default function MonthlyPaymentTable({ banks, schedules, loanTermMonths, onViewDetail }) {
   // Key months to display
   const keyMonths = [1, ...banks.map(b => b.fixedMonths), ...banks.map(b => b.fixedMonths + 1), 36, 60, loanTermMonths]
     .filter(m => m >= 1 && m <= loanTermMonths)
@@ -20,7 +20,16 @@ export default function MonthlyPaymentTable({ banks, schedules, loanTermMonths }
               <th className="text-left px-4 py-3 font-medium text-slate-600 whitespace-nowrap">Tháng</th>
               {banks.map(bank => (
                 <th key={bank.id} className="text-right px-4 py-3 font-medium whitespace-nowrap" style={{ color: bank.color }}>
-                  {bank.name}
+                  <div>{bank.name}</div>
+                  {onViewDetail && (
+                    <button
+                      className="mt-1 text-[10px] font-normal px-2 py-0.5 rounded border transition-colors hover:opacity-80"
+                      style={{ borderColor: bank.color, color: bank.color }}
+                      onClick={() => onViewDetail(bank.id)}
+                    >
+                      Xem chi tiết
+                    </button>
+                  )}
                 </th>
               ))}
             </tr>

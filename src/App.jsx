@@ -5,8 +5,9 @@ import ScenarioSection from './components/ScenarioSection';
 import MonthlyPaymentTable from './components/MonthlyPaymentTable';
 import ComparisonTable from './components/ComparisonTable';
 import ConclusionSection from './components/ConclusionSection';
+import BankDetailView from './components/BankDetailView';
 import { CostComparisonChart, BalanceChart, MonthlyPaymentChart } from './components/Charts';
-import { buildSchedule, calcScenario } from './utils/loanCalculations';
+import { buildSchedule, calcScenario, resolveAdditionalCosts } from './utils/loanCalculations';
 import { DEFAULT_LOAN, DEFAULT_BANKS, DEFAULT_SCENARIOS } from './data/defaultData';
 
 const BANK_COLORS = ['#7c3aed', '#0891b2', '#059669', '#dc2626', '#d97706', '#db2777', '#0f766e'];
@@ -14,20 +15,12 @@ const BANK_COLORS = ['#7c3aed', '#0891b2', '#059669', '#dc2626', '#d97706', '#db
 let bankIdCounter = 100;
 let scenarioIdCounter = 100;
 
-function resolveAdditionalCosts(bank, carPrice, loanAmount) {
-  return bank.additionalCosts.map(cost => {
-    let amount = cost.amount;
-    if (cost.type === 'percent_car') amount = carPrice * cost.percent / 100;
-    if (cost.type === 'percent_loan') amount = loanAmount * cost.percent / 100;
-    return { ...cost, amount };
-  });
-}
-
 export default function App() {
   const [loan, setLoan] = useState(DEFAULT_LOAN);
   const [banks, setBanks] = useState(DEFAULT_BANKS);
   const [scenarios, setScenarios] = useState(DEFAULT_SCENARIOS);
   const [activeTab, setActiveTab] = useState('input');
+  const [detailBankId, setDetailBankId] = useState(null);
 
   // Build amortization schedules for all banks
   const schedules = useMemo(() => {
@@ -106,6 +99,19 @@ export default function App() {
     { key: 'charts', label: 'Biểu đồ' },
   ];
 
+  const detailBank = detailBankId ? banks.find(b => b.id === detailBankId) : null;
+
+  function handleViewDetail(bankId) {
+    setDetailBankId(bankId);
+    setActiveTab('results');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function handleTabClick(key) {
+    setActiveTab(key);
+    setDetailBankId(null);
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -120,15 +126,28 @@ export default function App() {
               <button
                 key={tab.key}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === tab.key
+                  activeTab === tab.key && !detailBank
                     ? 'bg-white text-slate-900 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => handleTabClick(tab.key)}
               >
                 {tab.label}
               </button>
             ))}
+            {/* Detail breadcrumb chip */}
+            {detailBank && (
+              <>
+                <div className="w-px bg-slate-300 mx-1 self-stretch" />
+                <div
+                  className="px-3 py-1.5 rounded-md text-sm font-medium bg-white shadow-sm flex items-center gap-1.5"
+                  style={{ color: detailBank.color }}
+                >
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: detailBank.color }} />
+                  {detailBank.name}
+                </div>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -160,7 +179,7 @@ export default function App() {
             <div className="flex justify-end">
               <button
                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg text-sm transition-colors shadow"
-                onClick={() => setActiveTab('results')}
+                onClick={() => handleTabClick('results')}
               >
                 Xem kết quả →
               </button>
@@ -168,14 +187,30 @@ export default function App() {
           </>
         )}
 
-        {activeTab === 'results' && (
+        {activeTab === 'results' && detailBank && (
+          <BankDetailView
+            bank={detailBank}
+            loan={loan}
+            schedule={schedules[detailBank.id] || []}
+            onBack={() => setDetailBankId(null)}
+          />
+        )}
+
+        {activeTab === 'results' && !detailBank && (
           <>
             <MonthlyPaymentTable
               banks={banks}
               schedules={schedules}
               loanTermMonths={loan.loanTermMonths}
+              onViewDetail={handleViewDetail}
             />
-            <ComparisonTable banks={banks} scenarios={scenarios} results={results} />
+            <ComparisonTable
+              banks={banks}
+              scenarios={scenarios}
+              results={results}
+              schedules={schedules}
+              onViewDetail={handleViewDetail}
+            />
             <ConclusionSection banks={banks} scenarios={scenarios} results={results} />
           </>
         )}

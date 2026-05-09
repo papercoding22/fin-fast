@@ -135,3 +135,49 @@ export function formatNumber(value, decimals = 0) {
     maximumFractionDigits: decimals,
   }).format(value);
 }
+
+/**
+ * Resolve additional costs for a bank, computing amounts from percentages.
+ * Called with live carPrice and loanAmount so display stays in sync.
+ */
+export function resolveAdditionalCosts(bank, carPrice, loanAmount) {
+  return bank.additionalCosts.map(cost => {
+    let amount = cost.amount;
+    if (cost.type === 'percent_car') amount = carPrice * cost.percent / 100;
+    if (cost.type === 'percent_loan') amount = loanAmount * cost.percent / 100;
+    return { ...cost, amount };
+  });
+}
+
+/**
+ * Compute simple weighted-average effective annual rate over the full loan term.
+ */
+export function calcEffectiveRate(fixedRate, fixedMonths, floatingRate, loanTermMonths) {
+  const floatingMonths = Math.max(0, loanTermMonths - fixedMonths);
+  return (fixedRate * Math.min(fixedMonths, loanTermMonths) + floatingRate * floatingMonths) / loanTermMonths;
+}
+
+/**
+ * Export an amortization schedule as a CSV string.
+ */
+export function scheduleToCSV(schedule, bankName) {
+  const header = ['Tháng', 'Lãi suất (%/năm)', 'Dư nợ đầu kỳ (đ)', 'Gốc trả (đ)', 'Lãi trả (đ)', 'Tổng trả (đ)', 'Dư nợ cuối kỳ (đ)'];
+  const rows = schedule.map((row, i) => {
+    const openingBalance = i === 0 ? row.principal * schedule.length : schedule[i - 1].remainingAfter;
+    return [
+      row.month,
+      row.annualRate,
+      Math.round(openingBalance),
+      Math.round(row.principal),
+      Math.round(row.interest),
+      Math.round(row.totalPayment),
+      Math.round(row.remainingAfter),
+    ];
+  });
+  const totalPrincipal = schedule.reduce((s, r) => s + r.principal, 0);
+  const totalInterest = schedule.reduce((s, r) => s + r.interest, 0);
+  const totalPayment = schedule.reduce((s, r) => s + r.totalPayment, 0);
+  rows.push(['TỔNG', '', '', Math.round(totalPrincipal), Math.round(totalInterest), Math.round(totalPayment), 0]);
+  const csvLines = [header, ...rows].map(r => r.join(',')).join('\n');
+  return `﻿${bankName} - Lịch trả nợ\n${csvLines}`;
+}

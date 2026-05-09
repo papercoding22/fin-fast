@@ -1,14 +1,49 @@
-import { formatVND } from '../utils/loanCalculations';
+import { formatVND, scheduleToCSV } from '../utils/loanCalculations';
 
-export default function ComparisonTable({ banks, scenarios, results }) {
-  // results[scenarioId][bankId] = { totalInterestPaid, prepaymentFee, totalAdditional, totalCost, ... }
+function downloadBankCSV(bank, schedule) {
+  const csv = scheduleToCSV(schedule, bank.name);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `lich-tra-no-${bank.id}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
+export default function ComparisonTable({ banks, scenarios, results, schedules, onViewDetail }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-100">
         <h2 className="text-lg font-semibold text-slate-800">So sánh tổng chi phí theo kịch bản</h2>
         <p className="text-xs text-slate-500 mt-1">Màu xanh lá = chi phí thấp nhất trong kịch bản</p>
       </div>
+
+      {/* Per-bank action buttons */}
+      <div className="px-6 py-3 border-b border-slate-100 flex flex-wrap gap-3">
+        {banks.map(bank => (
+          <div key={bank.id} className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: bank.color }} />
+            <span className="text-xs font-medium text-slate-600">{bank.name}:</span>
+            <button
+              className="text-xs px-3 py-1 rounded-md border font-medium transition-colors"
+              style={{ borderColor: bank.color, color: bank.color }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = bank.color; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = ''; e.currentTarget.style.color = bank.color; }}
+              onClick={() => onViewDetail(bank.id)}
+            >
+              Xem chi tiết
+            </button>
+            <button
+              className="text-xs px-3 py-1 rounded-md border border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition-colors"
+              onClick={() => downloadBankCSV(bank, schedules[bank.id] || [])}
+            >
+              ↓ Xuất kế hoạch vay
+            </button>
+          </div>
+        ))}
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -60,7 +95,9 @@ export default function ComparisonTable({ banks, scenarios, results }) {
                     </td>
                     <td className="px-4 py-3 text-right text-slate-700">{formatVND(r.totalInterestPaid)}</td>
                     <td className="px-4 py-3 text-right text-slate-700">
-                      {r.isFullTerm ? <span className="text-green-600 text-xs">Đã tất toán</span> : formatVND(r.remainingBalance)}
+                      {r.isFullTerm
+                        ? <span className="text-green-600 text-xs">Đã tất toán</span>
+                        : formatVND(r.remainingBalance)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {r.prepaymentFee > 0 ? (
@@ -73,17 +110,17 @@ export default function ComparisonTable({ banks, scenarios, results }) {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right text-slate-700">
-                      {r.totalAdditional > 0 ? formatVND(r.totalAdditional) : <span className="text-slate-400 text-xs">—</span>}
+                      {r.totalAdditional > 0
+                        ? formatVND(r.totalAdditional)
+                        : <span className="text-slate-400 text-xs">—</span>}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold" style={{ color: isBest ? '#16a34a' : '#1e293b' }}>
                       {formatVND(r.costExcludingPrincipal)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {isBest ? (
-                        <span className="text-xs font-medium text-green-600">Rẻ nhất</span>
-                      ) : (
-                        <span className="text-red-600 font-medium">+{formatVND(diff)}</span>
-                      )}
+                      {isBest
+                        ? <span className="text-xs font-medium text-green-600">Rẻ nhất</span>
+                        : <span className="text-red-600 font-medium">+{formatVND(diff)}</span>}
                     </td>
                   </tr>
                 );
