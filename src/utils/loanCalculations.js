@@ -158,9 +158,52 @@ export function calcEffectiveRate(fixedRate, fixedMonths, floatingRate, loanTerm
 }
 
 /**
- * Export an amortization schedule as a CSV string.
+ * Compute the effective floating rate for a bank.
+ * If floatingRateMode === 'formula': rate = referenceIndex.currentValue + spread (+ optional offset for stress test)
+ * If floatingRateMode === 'direct' or mode is absent: return bank.floatingRate as-is.
  */
-export function scheduleToCSV(schedule, bankName) {
+export function computeFloatingRate(bank, referenceIndexes, stressOffset = 0) {
+  if (bank.floatingRateMode === 'formula' && bank.refIndexId) {
+    const ref = referenceIndexes.find(r => r.id === bank.refIndexId);
+    if (ref) {
+      return parseFloat((ref.currentValue + (bank.spread ?? 0) + stressOffset).toFixed(4));
+    }
+  }
+  // Direct mode or fallback
+  return bank.floatingRate + stressOffset;
+}
+
+/**
+ * Run a full scenario calculation with an optional stress-test offset on the floating rate.
+ * Returns the scenario result object.
+ */
+export function calcScenarioWithStress(
+  loanAmount, loanTermMonths, bank, referenceIndexes,
+  settleMonth, additionalCosts, stressOffset = 0
+) {
+  const floatingRate = computeFloatingRate(bank, referenceIndexes, stressOffset);
+  const schedule = buildSchedule(loanAmount, loanTermMonths, bank.fixedRate, bank.fixedMonths, floatingRate);
+  return {
+    floatingRate,
+    ...calcScenario(schedule, settleMonth, bank.prepaymentFees, additionalCosts),
+  };
+}
+
+/**
+ * Export an amortization schedule as a CSV string, with optional floating-rate formula metadata.
+ */
+export function scheduleToCSV(schedule, bankName, floatingRateMeta = null) {
+  const metaLines = floatingRateMeta
+    ? [
+        `Công thức lãi thả nổi: ${floatingRateMeta.formula}`,
+        `Chỉ số tham chiếu: ${floatingRateMeta.refName} = ${floatingRateMeta.refValue}%/năm (hiệu lực ${floatingRateMeta.effectiveDate})`,
+        `Biên độ: +${floatingRateMeta.spread}%`,
+        `Tần suất điều chỉnh: ${floatingRateMeta.adjustmentFrequency}`,
+        `Lưu ý: Lãi suất thả nổi có thể thay đổi theo thị trường - số liệu chỉ mang tính tham khảo`,
+        '',
+      ]
+    : [];
+
   const header = ['Tháng', 'Lãi suất (%/năm)', 'Dư nợ đầu kỳ (đ)', 'Gốc trả (đ)', 'Lãi trả (đ)', 'Tổng trả (đ)', 'Dư nợ cuối kỳ (đ)'];
   const rows = schedule.map((row, i) => {
     const openingBalance = i === 0 ? row.principal * schedule.length : schedule[i - 1].remainingAfter;
@@ -179,5 +222,5 @@ export function scheduleToCSV(schedule, bankName) {
   const totalPayment = schedule.reduce((s, r) => s + r.totalPayment, 0);
   rows.push(['TỔNG', '', '', Math.round(totalPrincipal), Math.round(totalInterest), Math.round(totalPayment), 0]);
   const csvLines = [header, ...rows].map(r => r.join(',')).join('\n');
-  return `﻿${bankName} - Lịch trả nợ\n${csvLines}`;
+  return `﻿${bankName} - Lịch trả nợ\n${metaLines.join('\n')}${csvLines}`;
 }

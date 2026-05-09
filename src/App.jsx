@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
 import LoanInputSection from './components/LoanInputSection';
 import BankInputSection from './components/BankInputSection';
+import ReferenceIndexSection from './components/ReferenceIndexSection';
 import ScenarioSection from './components/ScenarioSection';
 import MonthlyPaymentTable from './components/MonthlyPaymentTable';
 import ComparisonTable from './components/ComparisonTable';
 import ConclusionSection from './components/ConclusionSection';
 import BankDetailView from './components/BankDetailView';
 import { CostComparisonChart, BalanceChart, MonthlyPaymentChart } from './components/Charts';
-import { buildSchedule, calcScenario, resolveAdditionalCosts } from './utils/loanCalculations';
-import { DEFAULT_LOAN, DEFAULT_BANKS, DEFAULT_SCENARIOS } from './data/defaultData';
+import { buildSchedule, calcScenario, resolveAdditionalCosts, computeFloatingRate } from './utils/loanCalculations';
+import { DEFAULT_LOAN, DEFAULT_BANKS, DEFAULT_SCENARIOS, DEFAULT_REFERENCE_INDEXES } from './data/defaultData';
 
 const BANK_COLORS = ['#7c3aed', '#0891b2', '#059669', '#dc2626', '#d97706', '#db2777', '#0f766e'];
 
@@ -18,16 +19,26 @@ let scenarioIdCounter = 100;
 export default function App() {
   const [loan, setLoan] = useState(DEFAULT_LOAN);
   const [banks, setBanks] = useState(DEFAULT_BANKS);
+  const [referenceIndexes, setReferenceIndexes] = useState(DEFAULT_REFERENCE_INDEXES);
   const [scenarios, setScenarios] = useState(DEFAULT_SCENARIOS);
   const [activeTab, setActiveTab] = useState('input');
   const [detailBankId, setDetailBankId] = useState(null);
+
+  // Keep each bank's floatingRate in sync whenever a reference index value changes
+  const banksWithComputedRates = useMemo(() => {
+    return banks.map(bank => {
+      if (bank.floatingRateMode !== 'formula') return bank;
+      const computed = computeFloatingRate(bank, referenceIndexes);
+      return computed !== bank.floatingRate ? { ...bank, floatingRate: computed } : bank;
+    });
+  }, [banks, referenceIndexes]);
 
   // Build amortization schedules for all banks
   const schedules = useMemo(() => {
     const term = parseInt(loan.loanTermMonths);
     if (!term || term <= 0) return {};
     const result = {};
-    banks.forEach(bank => {
+    banksWithComputedRates.forEach(bank => {
       result[bank.id] = buildSchedule(
         loan.loanAmount,
         term,
@@ -37,14 +48,14 @@ export default function App() {
       );
     });
     return result;
-  }, [banks, loan]);
+  }, [banksWithComputedRates, loan]);
 
   // Calculate scenario results for all banks and scenarios
   const results = useMemo(() => {
     const output = {};
     scenarios.forEach(scenario => {
       output[scenario.id] = {};
-      banks.forEach(bank => {
+      banksWithComputedRates.forEach(bank => {
         const schedule = schedules[bank.id];
         if (!schedule) return;
         const additionalCosts = resolveAdditionalCosts(bank, loan.carPrice, loan.loanAmount);
@@ -57,7 +68,7 @@ export default function App() {
       });
     });
     return output;
-  }, [banks, schedules, scenarios, loan.carPrice, loan.loanAmount]);
+  }, [banksWithComputedRates, schedules, scenarios, loan.carPrice, loan.loanAmount]);
 
   function addBank() {
     const id = `bank_${++bankIdCounter}`;
@@ -68,6 +79,9 @@ export default function App() {
       color: BANK_COLORS[colorIdx],
       fixedRate: 9.0,
       fixedMonths: 12,
+      floatingRateMode: 'direct',
+      refIndexId: null,
+      spread: 0,
       floatingRate: 11.5,
       maxLtvPercent: 80,
       maxTermMonths: 96,
@@ -82,6 +96,19 @@ export default function App() {
 
   function removeBank(id) {
     setBanks(prev => prev.filter(b => b.id !== id));
+  }
+
+  // When BankInputSection changes banks, also recompute formula-based rates
+  function handleBanksChange(newBanks) {
+    setBanks(newBanks.map(bank => {
+      if (bank.floatingRateMode !== 'formula') return bank;
+      return { ...bank, floatingRate: computeFloatingRate(bank, referenceIndexes) };
+    }));
+  }
+
+  // When a reference index value changes, persist it — banksWithComputedRates reacts automatically
+  function handleReferenceIndexesChange(newIndexes) {
+    setReferenceIndexes(newIndexes);
   }
 
   function addScenario() {
@@ -99,7 +126,7 @@ export default function App() {
     { key: 'charts', label: 'Biểu đồ' },
   ];
 
-  const detailBank = detailBankId ? banks.find(b => b.id === detailBankId) : null;
+  const detailBank = detailBankId ? banksWithComputedRates.find(b => b.id === detailBankId) : null;
 
   function handleViewDetail(bankId) {
     setDetailBankId(bankId);
@@ -135,7 +162,6 @@ export default function App() {
                 {tab.label}
               </button>
             ))}
-            {/* Detail breadcrumb chip */}
             {detailBank && (
               <>
                 <div className="w-px bg-slate-300 mx-1 self-stretch" />
@@ -157,12 +183,19 @@ export default function App() {
           <>
             <LoanInputSection loan={loan} onChange={setLoan} />
 
+            {/* Reference indexes must come before banks so users set up indexes first */}
+            <ReferenceIndexSection
+              indexes={referenceIndexes}
+              onChange={handleReferenceIndexesChange}
+            />
+
             <div>
               <h2 className="text-lg font-semibold text-slate-800 mb-3">Thông tin ngân hàng</h2>
               <BankInputSection
-                banks={banks}
+                banks={banksWithComputedRates}
                 loan={loan}
-                onChange={setBanks}
+                referenceIndexes={referenceIndexes}
+                onChange={handleBanksChange}
                 onAdd={addBank}
                 onRemove={removeBank}
               />
@@ -192,6 +225,7 @@ export default function App() {
             bank={detailBank}
             loan={loan}
             schedule={schedules[detailBank.id] || []}
+            referenceIndexes={referenceIndexes}
             onBack={() => setDetailBankId(null)}
           />
         )}
@@ -199,28 +233,32 @@ export default function App() {
         {activeTab === 'results' && !detailBank && (
           <>
             <MonthlyPaymentTable
-              banks={banks}
+              banks={banksWithComputedRates}
               schedules={schedules}
               loanTermMonths={loan.loanTermMonths}
               onViewDetail={handleViewDetail}
             />
             <ComparisonTable
-              banks={banks}
+              banks={banksWithComputedRates}
               scenarios={scenarios}
               results={results}
               schedules={schedules}
               onViewDetail={handleViewDetail}
             />
-            <ConclusionSection banks={banks} scenarios={scenarios} results={results} />
+            <ConclusionSection
+              banks={banksWithComputedRates}
+              scenarios={scenarios}
+              results={results}
+            />
           </>
         )}
 
         {activeTab === 'charts' && (
           <>
-            <CostComparisonChart banks={banks} scenarios={scenarios} results={results} />
+            <CostComparisonChart banks={banksWithComputedRates} scenarios={scenarios} results={results} />
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <BalanceChart banks={banks} schedules={schedules} />
-              <MonthlyPaymentChart banks={banks} schedules={schedules} />
+              <BalanceChart banks={banksWithComputedRates} schedules={schedules} />
+              <MonthlyPaymentChart banks={banksWithComputedRates} schedules={schedules} />
             </div>
           </>
         )}
