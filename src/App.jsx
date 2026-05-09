@@ -31,11 +31,13 @@ export default function App() {
 
   // Build amortization schedules for all banks
   const schedules = useMemo(() => {
+    const term = parseInt(loan.loanTermMonths);
+    if (!term || term <= 0) return {};
     const result = {};
     banks.forEach(bank => {
       result[bank.id] = buildSchedule(
         loan.loanAmount,
-        loan.loanTermMonths,
+        term,
         bank.fixedRate,
         bank.fixedMonths,
         bank.floatingRate
