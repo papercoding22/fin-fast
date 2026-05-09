@@ -3,6 +3,8 @@
  * that floating-rate formulas can reference.
  */
 
+import DatePicker from './DatePicker';
+
 let refIdCounter = 200;
 
 export default function ReferenceIndexSection({ indexes, onChange }) {
@@ -99,11 +101,9 @@ export default function ReferenceIndexSection({ indexes, onChange }) {
               {/* Ngày hiệu lực */}
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Ngày hiệu lực</label>
-                <input
-                  type="date"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                <DatePicker
                   value={ref.effectiveDate}
-                  onChange={e => update(ref.id, 'effectiveDate', e.target.value)}
+                  onChange={v => update(ref.id, 'effectiveDate', v)}
                 />
               </div>
 
