@@ -10,6 +10,7 @@ import BankDetailView from './components/BankDetailView';
 import { CostComparisonChart, BalanceChart, MonthlyPaymentChart } from './components/Charts';
 import { buildSchedule, calcScenario, resolveAdditionalCosts, computeFloatingRate } from './utils/loanCalculations';
 import { DEFAULT_LOAN, DEFAULT_BANKS, DEFAULT_SCENARIOS, DEFAULT_REFERENCE_INDEXES } from './data/defaultData';
+import { useLocalStorage, clearAppStorage } from './hooks/useLocalStorage';
 
 const BANK_COLORS = ['#7c3aed', '#0891b2', '#059669', '#dc2626', '#d97706', '#db2777', '#0f766e'];
 
@@ -17,12 +18,26 @@ let bankIdCounter = 100;
 let scenarioIdCounter = 100;
 
 export default function App() {
-  const [loan, setLoan] = useState(DEFAULT_LOAN);
-  const [banks, setBanks] = useState(DEFAULT_BANKS);
-  const [referenceIndexes, setReferenceIndexes] = useState(DEFAULT_REFERENCE_INDEXES);
-  const [scenarios, setScenarios] = useState(DEFAULT_SCENARIOS);
+  // Persistent state — auto-saved to localStorage on every change
+  const [loan, setLoan] = useLocalStorage('loan', DEFAULT_LOAN);
+  const [banks, setBanks] = useLocalStorage('banks', DEFAULT_BANKS);
+  const [referenceIndexes, setReferenceIndexes] = useLocalStorage('referenceIndexes', DEFAULT_REFERENCE_INDEXES);
+  const [scenarios, setScenarios] = useLocalStorage('scenarios', DEFAULT_SCENARIOS);
+
+  // UI-only state — not persisted
   const [activeTab, setActiveTab] = useState('input');
   const [detailBankId, setDetailBankId] = useState(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  function handleReset() {
+    clearAppStorage();
+    setLoan(DEFAULT_LOAN);
+    setBanks(DEFAULT_BANKS);
+    setReferenceIndexes(DEFAULT_REFERENCE_INDEXES);
+    setScenarios(DEFAULT_SCENARIOS);
+    setDetailBankId(null);
+    setShowResetConfirm(false);
+  }
 
   // Keep each bank's floatingRate in sync whenever a reference index value changes
   const banksWithComputedRates = useMemo(() => {
@@ -146,9 +161,38 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-slate-900">So sánh vay mua ô tô</h1>
-            <p className="text-xs text-slate-500">Tính toán và so sánh chi phí vay giữa các ngân hàng</p>
+            <p className="text-xs text-slate-500">
+              Tính toán và so sánh chi phí vay giữa các ngân hàng
+              <span className="ml-2 text-green-500 font-medium">● Tự động lưu</span>
+            </p>
           </div>
-          <nav className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Reset button + inline confirm */}
+            {showResetConfirm ? (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                <span className="text-xs text-red-700 font-medium">Xóa toàn bộ dữ liệu?</span>
+                <button
+                  className="text-xs px-2 py-0.5 bg-red-600 text-white rounded hover:bg-red-700 font-medium"
+                  onClick={handleReset}
+                >
+                  Xác nhận
+                </button>
+                <button
+                  className="text-xs px-2 py-0.5 text-slate-600 hover:text-slate-900"
+                  onClick={() => setShowResetConfirm(false)}
+                >
+                  Hủy
+                </button>
+              </div>
+            ) : (
+              <button
+                className="text-xs text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-300 rounded-lg px-3 py-1.5 transition-colors"
+                onClick={() => setShowResetConfirm(true)}
+              >
+                Đặt lại mặc định
+              </button>
+            )}
+            <nav className="flex gap-1 bg-slate-100 p-1 rounded-lg">
             {TABS.map(tab => (
               <button
                 key={tab.key}
@@ -174,7 +218,8 @@ export default function App() {
                 </div>
               </>
             )}
-          </nav>
+            </nav>
+          </div>
         </div>
       </header>
 
