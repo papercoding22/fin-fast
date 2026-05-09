@@ -11,14 +11,13 @@ export const DEFAULT_LOAN = {
 
 /**
  * Reference index pool (LSCS / SPR).
- * Each entry represents one market reference rate used in floating-rate formulas.
  */
 export const DEFAULT_REFERENCE_INDEXES = [
   {
     id: 'tpbank_lscs_3m',
     name: 'LSCS 3M',
     provider: 'TPBank',
-    currentValue: 9.9,      // %/năm
+    currentValue: 8.9,
     effectiveDate: '2025-01-01',
     adjustmentFrequency: '3 tháng',
     notes: 'Lãi suất cơ sở kỳ hạn 3 tháng của TPBank',
@@ -27,7 +26,7 @@ export const DEFAULT_REFERENCE_INDEXES = [
     id: 'shinhan_spr_6m',
     name: 'SPR 6M',
     provider: 'Shinhan Bank',
-    currentValue: 8.63,     // %/năm
+    currentValue: 8.92,
     effectiveDate: '2025-01-01',
     adjustmentFrequency: '6 tháng',
     notes: 'Standard Prime Rate kỳ hạn 6 tháng của Shinhan',
@@ -39,13 +38,12 @@ export const DEFAULT_BANKS = [
     id: 'tpbank',
     name: 'TPBank',
     color: '#7c3aed',
-    fixedRate: 8.7,
-    fixedMonths: 12,
-    // floatingRateMode: 'formula' → floatingRate computed from refIndexId + spread
+    fixedRate: 10.7,
+    fixedMonths: 24,
     floatingRateMode: 'formula',
     refIndexId: 'tpbank_lscs_3m',
     spread: 3.6,
-    floatingRate: 13.5,    // = 9.9 + 3.6 (computed, always in sync)
+    floatingRate: 12.5,   // = 8.9 + 3.6
     maxLtvPercent: 85,
     maxTermMonths: 96,
     prepaymentFees: [
@@ -60,12 +58,12 @@ export const DEFAULT_BANKS = [
     id: 'shinhan',
     name: 'Shinhan Bank',
     color: '#0891b2',
-    fixedRate: 9.7,
-    fixedMonths: 12,
+    fixedRate: 9.6,
+    fixedMonths: 24,
     floatingRateMode: 'formula',
     refIndexId: 'shinhan_spr_6m',
     spread: 2.5,
-    floatingRate: 11.13,   // = 8.63 + 2.5
+    floatingRate: 11.42,  // = 8.92 + 2.5
     maxLtvPercent: 80,
     maxTermMonths: 96,
     prepaymentFees: [
@@ -94,4 +92,4 @@ export const DEFAULT_SCENARIOS = [
 ];
 
 /** Stress test offsets applied to the reference index value */
-export const STRESS_OFFSETS = [-1, 0, 1, 2, 3]; // percentage points
+export const STRESS_OFFSETS = [-1, 0, 1, 2, 3];
