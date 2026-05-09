@@ -1,13 +1,9 @@
 import { useState, useMemo } from 'react';
-import LoanInputSection from './components/LoanInputSection';
-import BankInputSection from './components/BankInputSection';
-import ReferenceIndexSection from './components/ReferenceIndexSection';
-import ScenarioSection from './components/ScenarioSection';
-import MonthlyPaymentTable from './components/MonthlyPaymentTable';
-import ComparisonTable from './components/ComparisonTable';
-import ConclusionSection from './components/ConclusionSection';
-import BankDetailView from './components/BankDetailView';
-import { CostComparisonChart, BalanceChart, MonthlyPaymentChart } from './components/Charts';
+import { Routes, Route, Navigate, NavLink, useMatch } from 'react-router-dom';
+import InputPage from './pages/InputPage';
+import ResultsPage from './pages/ResultsPage';
+import BankDetailPage from './pages/BankDetailPage';
+import ChartsPage from './pages/ChartsPage';
 import { buildSchedule, calcScenario, resolveAdditionalCosts, computeFloatingRate } from './utils/loanCalculations';
 import { DEFAULT_LOAN, DEFAULT_BANKS, DEFAULT_SCENARIOS, DEFAULT_REFERENCE_INDEXES } from './data/defaultData';
 import { useLocalStorage, clearAppStorage } from './hooks/useLocalStorage';
@@ -17,17 +13,20 @@ const BANK_COLORS = ['#7c3aed', '#0891b2', '#059669', '#dc2626', '#d97706', '#db
 let bankIdCounter = 100;
 let scenarioIdCounter = 100;
 
+const NAV_TABS = [
+  { to: '/input', label: 'Nhập liệu' },
+  { to: '/results', label: 'Kết quả' },
+  { to: '/charts', label: 'Biểu đồ' },
+];
+
 export default function App() {
-  // Persistent state — auto-saved to localStorage on every change
   const [loan, setLoan] = useLocalStorage('loan', DEFAULT_LOAN);
   const [banks, setBanks] = useLocalStorage('banks', DEFAULT_BANKS);
   const [referenceIndexes, setReferenceIndexes] = useLocalStorage('referenceIndexes', DEFAULT_REFERENCE_INDEXES);
   const [scenarios, setScenarios] = useLocalStorage('scenarios', DEFAULT_SCENARIOS);
-
-  // UI-only state — not persisted
-  const [activeTab, setActiveTab] = useState('input');
-  const [detailBankId, setDetailBankId] = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const detailMatch = useMatch('/results/:bankId');
 
   function handleReset() {
     clearAppStorage();
@@ -35,11 +34,9 @@ export default function App() {
     setBanks(DEFAULT_BANKS);
     setReferenceIndexes(DEFAULT_REFERENCE_INDEXES);
     setScenarios(DEFAULT_SCENARIOS);
-    setDetailBankId(null);
     setShowResetConfirm(false);
   }
 
-  // Keep each bank's floatingRate in sync whenever a reference index value changes
   const banksWithComputedRates = useMemo(() => {
     return banks.map(bank => {
       if (bank.floatingRateMode !== 'formula') return bank;
@@ -48,24 +45,18 @@ export default function App() {
     });
   }, [banks, referenceIndexes]);
 
-  // Build amortization schedules for all banks
   const schedules = useMemo(() => {
     const term = parseInt(loan.loanTermMonths);
     if (!term || term <= 0) return {};
     const result = {};
     banksWithComputedRates.forEach(bank => {
       result[bank.id] = buildSchedule(
-        loan.loanAmount,
-        term,
-        bank.fixedRate,
-        bank.fixedMonths,
-        bank.floatingRate
+        loan.loanAmount, term, bank.fixedRate, bank.fixedMonths, bank.floatingRate
       );
     });
     return result;
   }, [banksWithComputedRates, loan]);
 
-  // Calculate scenario results for all banks and scenarios
   const results = useMemo(() => {
     const output = {};
     scenarios.forEach(scenario => {
@@ -75,10 +66,7 @@ export default function App() {
         if (!schedule) return;
         const additionalCosts = resolveAdditionalCosts(bank, loan.carPrice, loan.loanAmount);
         output[scenario.id][bank.id] = calcScenario(
-          schedule,
-          scenario.settleMonth,
-          bank.prepaymentFees,
-          additionalCosts
+          schedule, scenario.settleMonth, bank.prepaymentFees, additionalCosts
         );
       });
     });
@@ -89,17 +77,10 @@ export default function App() {
     const id = `bank_${++bankIdCounter}`;
     const colorIdx = banks.length % BANK_COLORS.length;
     setBanks(prev => [...prev, {
-      id,
-      name: 'Ngân hàng mới',
-      color: BANK_COLORS[colorIdx],
-      fixedRate: 9.0,
-      fixedMonths: 12,
-      floatingRateMode: 'direct',
-      refIndexId: null,
-      spread: 0,
-      floatingRate: 11.5,
-      maxLtvPercent: 80,
-      maxTermMonths: 96,
+      id, name: 'Ngân hàng mới', color: BANK_COLORS[colorIdx],
+      fixedRate: 9.0, fixedMonths: 12,
+      floatingRateMode: 'direct', refIndexId: null, spread: 0, floatingRate: 11.5,
+      maxLtvPercent: 80, maxTermMonths: 96,
       prepaymentFees: [
         { upToYear: 2, rate: 3 },
         { upToYear: 4, rate: 1.5 },
@@ -113,17 +94,11 @@ export default function App() {
     setBanks(prev => prev.filter(b => b.id !== id));
   }
 
-  // When BankInputSection changes banks, also recompute formula-based rates
   function handleBanksChange(newBanks) {
     setBanks(newBanks.map(bank => {
       if (bank.floatingRateMode !== 'formula') return bank;
       return { ...bank, floatingRate: computeFloatingRate(bank, referenceIndexes) };
     }));
-  }
-
-  // When a reference index value changes, persist it — banksWithComputedRates reacts automatically
-  function handleReferenceIndexesChange(newIndexes) {
-    setReferenceIndexes(newIndexes);
   }
 
   function addScenario() {
@@ -135,28 +110,17 @@ export default function App() {
     setScenarios(prev => prev.filter(s => s.id !== id));
   }
 
-  const TABS = [
-    { key: 'input', label: 'Nhập liệu' },
-    { key: 'results', label: 'Kết quả' },
-    { key: 'charts', label: 'Biểu đồ' },
-  ];
+  const detailBank = detailMatch
+    ? banksWithComputedRates.find(b => b.id === detailMatch.params.bankId)
+    : null;
 
-  const detailBank = detailBankId ? banksWithComputedRates.find(b => b.id === detailBankId) : null;
-
-  function handleViewDetail(bankId) {
-    setDetailBankId(bankId);
-    setActiveTab('results');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function handleTabClick(key) {
-    setActiveTab(key);
-    setDetailBankId(null);
-  }
+  const tabClass = ({ isActive }) =>
+    `px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+      isActive ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+    }`;
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -167,7 +131,6 @@ export default function App() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Reset button + inline confirm */}
             {showResetConfirm ? (
               <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
                 <span className="text-xs text-red-700 font-medium">Xóa toàn bộ dữ liệu?</span>
@@ -193,120 +156,74 @@ export default function App() {
               </button>
             )}
             <nav className="flex gap-1 bg-slate-100 p-1 rounded-lg">
-            {TABS.map(tab => (
-              <button
-                key={tab.key}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === tab.key && !detailBank
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-                onClick={() => handleTabClick(tab.key)}
-              >
-                {tab.label}
-              </button>
-            ))}
-            {detailBank && (
-              <>
-                <div className="w-px bg-slate-300 mx-1 self-stretch" />
-                <div
-                  className="px-3 py-1.5 rounded-md text-sm font-medium bg-white shadow-sm flex items-center gap-1.5"
-                  style={{ color: detailBank.color }}
-                >
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: detailBank.color }} />
-                  {detailBank.name}
-                </div>
-              </>
-            )}
+              {NAV_TABS.map(tab => (
+                <NavLink key={tab.to} to={tab.to} end={tab.to !== '/results'} className={tabClass}>
+                  {tab.label}
+                </NavLink>
+              ))}
+              {detailBank && (
+                <>
+                  <div className="w-px bg-slate-300 mx-1 self-stretch" />
+                  <div
+                    className="px-3 py-1.5 rounded-md text-sm font-medium bg-white shadow-sm flex items-center gap-1.5"
+                    style={{ color: detailBank.color }}
+                  >
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: detailBank.color }} />
+                    {detailBank.name}
+                  </div>
+                </>
+              )}
             </nav>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {activeTab === 'input' && (
-          <>
-            <LoanInputSection loan={loan} onChange={setLoan} />
-
-            {/* Reference indexes must come before banks so users set up indexes first */}
-            <ReferenceIndexSection
-              indexes={referenceIndexes}
-              onChange={handleReferenceIndexesChange}
-            />
-
-            <div>
-              <h2 className="text-lg font-semibold text-slate-800 mb-3">Thông tin ngân hàng</h2>
-              <BankInputSection
-                banks={banksWithComputedRates}
-                loan={loan}
-                referenceIndexes={referenceIndexes}
-                onChange={handleBanksChange}
-                onAdd={addBank}
-                onRemove={removeBank}
-              />
-            </div>
-
-            <ScenarioSection
+        <Routes>
+          <Route index element={<Navigate to="/input" replace />} />
+          <Route path="*" element={<Navigate to="/input" replace />} />
+          <Route path="/input" element={
+            <InputPage
+              loan={loan}
+              onLoanChange={setLoan}
+              banks={banksWithComputedRates}
+              onBanksChange={handleBanksChange}
+              onAddBank={addBank}
+              onRemoveBank={removeBank}
+              referenceIndexes={referenceIndexes}
+              onReferenceIndexesChange={setReferenceIndexes}
               scenarios={scenarios}
-              loanTermMonths={loan.loanTermMonths}
-              onChange={setScenarios}
-              onAdd={addScenario}
-              onRemove={removeScenario}
+              onScenariosChange={setScenarios}
+              onAddScenario={addScenario}
+              onRemoveScenario={removeScenario}
             />
-
-            <div className="flex justify-end">
-              <button
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg text-sm transition-colors shadow"
-                onClick={() => handleTabClick('results')}
-              >
-                Xem kết quả →
-              </button>
-            </div>
-          </>
-        )}
-
-        {activeTab === 'results' && detailBank && (
-          <BankDetailView
-            bank={detailBank}
-            loan={loan}
-            schedule={schedules[detailBank.id] || []}
-            referenceIndexes={referenceIndexes}
-            onBack={() => setDetailBankId(null)}
-          />
-        )}
-
-        {activeTab === 'results' && !detailBank && (
-          <>
-            <MonthlyPaymentTable
+          } />
+          <Route path="/results" element={
+            <ResultsPage
               banks={banksWithComputedRates}
               schedules={schedules}
-              loanTermMonths={loan.loanTermMonths}
-              onViewDetail={handleViewDetail}
-            />
-            <ComparisonTable
-              banks={banksWithComputedRates}
               scenarios={scenarios}
               results={results}
-              schedules={schedules}
-              onViewDetail={handleViewDetail}
+              loanTermMonths={loan.loanTermMonths}
             />
-            <ConclusionSection
+          } />
+          <Route path="/results/:bankId" element={
+            <BankDetailPage
               banks={banksWithComputedRates}
+              loan={loan}
+              schedules={schedules}
+              referenceIndexes={referenceIndexes}
+            />
+          } />
+          <Route path="/charts" element={
+            <ChartsPage
+              banks={banksWithComputedRates}
+              schedules={schedules}
               scenarios={scenarios}
               results={results}
             />
-          </>
-        )}
-
-        {activeTab === 'charts' && (
-          <>
-            <CostComparisonChart banks={banksWithComputedRates} scenarios={scenarios} results={results} />
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <BalanceChart banks={banksWithComputedRates} schedules={schedules} />
-              <MonthlyPaymentChart banks={banksWithComputedRates} schedules={schedules} />
-            </div>
-          </>
-        )}
+          } />
+        </Routes>
       </main>
 
       <footer className="text-center text-xs text-slate-400 py-8 mt-4">
