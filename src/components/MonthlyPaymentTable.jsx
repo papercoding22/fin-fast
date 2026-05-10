@@ -34,7 +34,7 @@ export default function MonthlyPaymentTable({ banks, schedules, loanTermMonths, 
               {banks.map((bank) => (
                 <th
                   key={bank.id}
-                  className="text-right px-4 py-3 font-medium whitespace-nowrap"
+                  className="text-right px-4 py-3 font-medium whitespace-nowrap min-w-50"
                   style={{ color: bank.color }}
                 >
                   <div>{bank.name}</div>
