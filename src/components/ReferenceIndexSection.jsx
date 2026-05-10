@@ -9,7 +9,6 @@ let refIdCounter = 200;
 
 export default function ReferenceIndexSection({ indexes, onChange }) {
   function update(id, field, value) {
-    console.log("TCL: update -> id, field, value", id, field, value);
     onChange(indexes.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   }
 

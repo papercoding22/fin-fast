@@ -41,7 +41,6 @@ function ChevronRight() {
 // value/onChange use 'YYYY-MM-DD' string format
 export default function DatePicker({ value, onChange, className = "" }) {
   const [open, setOpen] = useState(false);
-  console.log("TCL: DatePicker -> open", open);
   const [alignRight, setAlignRight] = useState(false);
   const containerRef = useRef(null);
 
@@ -65,7 +64,6 @@ export default function DatePicker({ value, onChange, className = "" }) {
   }, [open]);
 
   function handleSelect(day) {
-    console.log("TCL: handleSelect -> day", day);
     if (!day) return;
     const y = day.getFullYear();
     const m = String(day.getMonth() + 1).padStart(2, "0");
