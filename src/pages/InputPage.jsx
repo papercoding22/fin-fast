@@ -1,14 +1,22 @@
-import { useNavigate } from 'react-router-dom';
-import LoanInputSection from '../components/LoanInputSection';
-import BankInputSection from '../components/BankInputSection';
-import ReferenceIndexSection from '../components/ReferenceIndexSection';
-import ScenarioSection from '../components/ScenarioSection';
+import { useNavigate } from "react-router-dom";
+import LoanInputSection from "../components/LoanInputSection";
+import BankInputSection from "../components/BankInputSection";
+import ReferenceIndexSection from "../components/ReferenceIndexSection";
+import ScenarioSection from "../components/ScenarioSection";
 
 export default function InputPage({
-  loan, onLoanChange,
-  banks, onBanksChange, onAddBank, onRemoveBank,
-  referenceIndexes, onReferenceIndexesChange,
-  scenarios, onScenariosChange, onAddScenario, onRemoveScenario,
+  loan,
+  onLoanChange,
+  banks,
+  onBanksChange,
+  onAddBank,
+  onRemoveBank,
+  referenceIndexes,
+  onReferenceIndexesChange,
+  scenarios,
+  onScenariosChange,
+  onAddScenario,
+  onRemoveScenario,
 }) {
   const navigate = useNavigate();
 
@@ -41,7 +49,7 @@ export default function InputPage({
       <div className="flex justify-end">
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg text-sm transition-colors shadow"
-          onClick={() => navigate('/results')}
+          onClick={() => navigate("/results")}
         >
           Xem kết quả →
         </button>

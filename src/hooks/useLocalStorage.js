@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
-const STORAGE_VERSION = 'v1';
+const STORAGE_VERSION = "v1";
 
 /**
  * useState replacement that persists to localStorage.
@@ -36,6 +36,6 @@ export function useLocalStorage(key, defaultValue) {
 export function clearAppStorage() {
   const prefix = `finfast_${STORAGE_VERSION}_`;
   Object.keys(localStorage)
-    .filter(k => k.startsWith(prefix))
-    .forEach(k => localStorage.removeItem(k));
+    .filter((k) => k.startsWith(prefix))
+    .forEach((k) => localStorage.removeItem(k));
 }

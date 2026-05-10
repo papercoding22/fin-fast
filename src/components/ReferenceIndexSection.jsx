@@ -3,37 +3,43 @@
  * that floating-rate formulas can reference.
  */
 
-import DatePicker from './DatePicker';
+import DatePicker from "./DatePicker";
 
 let refIdCounter = 200;
 
 export default function ReferenceIndexSection({ indexes, onChange }) {
   function update(id, field, value) {
-    onChange(indexes.map(r => r.id === id ? { ...r, [field]: value } : r));
+    console.log("TCL: update -> id, field, value", id, field, value);
+    onChange(indexes.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   }
 
   function add() {
     const id = `ref_${++refIdCounter}`;
-    onChange([...indexes, {
-      id,
-      name: 'Chỉ số mới',
-      provider: '',
-      currentValue: 0,
-      effectiveDate: new Date().toISOString().slice(0, 10),
-      adjustmentFrequency: '3 tháng',
-      notes: '',
-    }]);
+    onChange([
+      ...indexes,
+      {
+        id,
+        name: "Chỉ số mới",
+        provider: "",
+        currentValue: 0,
+        effectiveDate: new Date().toISOString().slice(0, 10),
+        adjustmentFrequency: "3 tháng",
+        notes: "",
+      },
+    ]);
   }
 
   function remove(id) {
-    onChange(indexes.filter(r => r.id !== id));
+    onChange(indexes.filter((r) => r.id !== id));
   }
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">Chỉ số tham chiếu lãi suất (LSCS / SPR)</h2>
+          <h2 className="text-lg font-semibold text-slate-800">
+            Chỉ số tham chiếu lãi suất (LSCS / SPR)
+          </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Định nghĩa các chỉ số dùng trong công thức lãi suất thả nổi của từng ngân hàng
           </p>
@@ -53,7 +59,7 @@ export default function ReferenceIndexSection({ indexes, onChange }) {
       )}
 
       <div className="space-y-3">
-        {indexes.map(ref => (
+        {indexes.map((ref) => (
           <div
             key={ref.id}
             className="rounded-xl border border-slate-200 p-4 bg-slate-50 hover:bg-white transition-colors"
@@ -66,7 +72,7 @@ export default function ReferenceIndexSection({ indexes, onChange }) {
                   type="text"
                   className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   value={ref.name}
-                  onChange={e => update(ref.id, 'name', e.target.value)}
+                  onChange={(e) => update(ref.id, "name", e.target.value)}
                   placeholder="LSCS 3M"
                 />
               </div>
@@ -78,7 +84,7 @@ export default function ReferenceIndexSection({ indexes, onChange }) {
                   type="text"
                   className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   value={ref.provider}
-                  onChange={e => update(ref.id, 'provider', e.target.value)}
+                  onChange={(e) => update(ref.id, "provider", e.target.value)}
                   placeholder="TPBank"
                 />
               </div>
@@ -94,26 +100,30 @@ export default function ReferenceIndexSection({ indexes, onChange }) {
                   min="0"
                   className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium"
                   value={ref.currentValue}
-                  onChange={e => update(ref.id, 'currentValue', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => update(ref.id, "currentValue", parseFloat(e.target.value) || 0)}
                 />
               </div>
 
               {/* Ngày hiệu lực */}
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Ngày hiệu lực</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1">
+                  Ngày hiệu lực
+                </label>
                 <DatePicker
                   value={ref.effectiveDate}
-                  onChange={v => update(ref.id, 'effectiveDate', v)}
+                  onChange={(v) => update(ref.id, "effectiveDate", v)}
                 />
               </div>
 
               {/* Tần suất điều chỉnh */}
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Tần suất điều chỉnh</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1">
+                  Tần suất điều chỉnh
+                </label>
                 <select
                   className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   value={ref.adjustmentFrequency}
-                  onChange={e => update(ref.id, 'adjustmentFrequency', e.target.value)}
+                  onChange={(e) => update(ref.id, "adjustmentFrequency", e.target.value)}
                 >
                   <option value="1 tháng">Hàng tháng</option>
                   <option value="3 tháng">3 tháng / lần</option>
@@ -140,7 +150,7 @@ export default function ReferenceIndexSection({ indexes, onChange }) {
                 type="text"
                 className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
                 value={ref.notes}
-                onChange={e => update(ref.id, 'notes', e.target.value)}
+                onChange={(e) => update(ref.id, "notes", e.target.value)}
                 placeholder="Ghi chú / nguồn dữ liệu (tuỳ chọn)"
               />
             </div>

@@ -1,10 +1,7 @@
 import { formatNumber } from "../utils/loanCalculations";
 
 export default function LoanInputSection({ loan, onChange }) {
-  const ltvPercent =
-    loan.carPrice > 0
-      ? ((loan.loanAmount / loan.carPrice) * 100).toFixed(1)
-      : 0;
+  const ltvPercent = loan.carPrice > 0 ? ((loan.loanAmount / loan.carPrice) * 100).toFixed(1) : 0;
 
   function handleChange(field, raw) {
     const value = parseInt(raw.replace(/\D/g, ""), 10) || 0;
@@ -19,9 +16,7 @@ export default function LoanInputSection({ loan, onChange }) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-      <h2 className="text-lg font-semibold text-slate-800 mb-4">
-        Thông tin khoản vay
-      </h2>
+      <h2 className="text-lg font-semibold text-slate-800 mb-4">Thông tin khoản vay</h2>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 items-end">
         <div>
           <label className="block text-sm font-medium text-slate-600 mb-1">
@@ -35,9 +30,7 @@ export default function LoanInputSection({ loan, onChange }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-1">
-            Tiền tự có (VNĐ)
-          </label>
+          <label className="block text-sm font-medium text-slate-600 mb-1">Tiền tự có (VNĐ)</label>
           <input
             type="text"
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -48,9 +41,7 @@ export default function LoanInputSection({ loan, onChange }) {
         <div>
           <label className="block text-sm font-medium text-slate-600 mb-1">
             Số tiền vay (VNĐ)
-            <span className="ml-1 text-xs text-slate-400">
-              ({ltvPercent}% giá xe)
-            </span>
+            <span className="ml-1 text-xs text-slate-400">({ltvPercent}% giá xe)</span>
           </label>
           <input
             type="text"
@@ -72,8 +63,7 @@ export default function LoanInputSection({ loan, onChange }) {
             onChange={(e) =>
               onChange({
                 ...loan,
-                loanTermMonths:
-                  e.target.value === "" ? "" : parseInt(e.target.value),
+                loanTermMonths: e.target.value === "" ? "" : parseInt(e.target.value),
               })
             }
             onBlur={(e) => {

@@ -1,4 +1,4 @@
-import { CostComparisonChart, BalanceChart, MonthlyPaymentChart } from '../components/Charts';
+import { CostComparisonChart, BalanceChart, MonthlyPaymentChart } from "../components/Charts";
 
 export default function ChartsPage({ banks, schedules, scenarios, results }) {
   return (
