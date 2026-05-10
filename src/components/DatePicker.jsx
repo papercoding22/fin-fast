@@ -41,6 +41,7 @@ function ChevronRight() {
 // value/onChange use 'YYYY-MM-DD' string format
 export default function DatePicker({ value, onChange, className = "" }) {
   const [open, setOpen] = useState(false);
+  console.log("TCL: DatePicker -> open", open);
   const [alignRight, setAlignRight] = useState(false);
   const containerRef = useRef(null);
 
@@ -64,6 +65,7 @@ export default function DatePicker({ value, onChange, className = "" }) {
   }, [open]);
 
   function handleSelect(day) {
+    console.log("TCL: handleSelect -> day", day);
     if (!day) return;
     const y = day.getFullYear();
     const m = String(day.getMonth() + 1).padStart(2, "0");
@@ -105,14 +107,15 @@ export default function DatePicker({ value, onChange, className = "" }) {
                 orientation === "left" ? <ChevronLeft /> : <ChevronRight />,
             }}
             classNames={{
+              root: "relative",
               months: "flex flex-col",
-              month_caption: "flex justify-center items-center h-9 mb-2 relative",
+              month_caption: "flex justify-center items-center h-9 mb-2",
               caption_label: "text-sm font-semibold text-slate-800 capitalize",
-              nav: "absolute inset-0 flex items-center justify-between px-0.5",
+              nav: "absolute top-0 inset-x-0 h-9 flex items-center justify-between px-0.5 pointer-events-none",
               button_previous:
-                "p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors focus:outline-none",
+                "pointer-events-auto p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors focus:outline-none",
               button_next:
-                "p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors focus:outline-none",
+                "pointer-events-auto p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors focus:outline-none",
               weekdays: "flex",
               weekday:
                 "w-9 h-8 flex items-center justify-center text-xs text-slate-400 font-medium",
